@@ -865,6 +865,7 @@ class GraphWriter:
                     SET m.version = row.version,
                         m.packaging = row.packaging,
                         m.pom_path = row.pom_path,
+                        m.path = row.pom_path,
                         m.repo_path = $repo_path
                     """,
                     batch=modules[i : i + batch_size],
@@ -932,7 +933,7 @@ class GraphWriter:
                     """
                     UNWIND $batch AS row
                     MERGE (m:GradleModule {name: row.name})
-                    SET m.build_file = row.build_file, m.repo_path = $repo_path
+                    SET m.build_file = row.build_file, m.path = row.build_file, m.repo_path = $repo_path
                     """,
                     batch=modules[i : i + batch_size],
                     repo_path=repo_path_str,
