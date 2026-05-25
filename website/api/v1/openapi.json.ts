@@ -504,7 +504,16 @@ export default async function handler(req: any, res: any) {
           ],
           responses: {
             "200": {
-              description: "Graph database purged successfully"
+              description: "Graph database purged successfully",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {},
+                    additionalProperties: true
+                  }
+                }
+              }
             }
           }
         }
@@ -516,7 +525,16 @@ export default async function handler(req: any, res: any) {
           operationId: "listIndexedRepositories",
           responses: {
             "200": {
-              description: "Indexed repository list returned successfully"
+              description: "Indexed repository list returned successfully",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {},
+                    additionalProperties: true
+                  }
+                }
+              }
             }
           }
         }
