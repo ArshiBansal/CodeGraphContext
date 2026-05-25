@@ -25,6 +25,7 @@ export class KuzuCoordinator {
   private executeToolCallback: ToolCallCallback;
   
   private isSubscribed = false;
+  private isStarted = false; // Tracks if start() has been explicitly called by the parent component
 
   constructor(
     supabaseUrl: string,
@@ -44,11 +45,28 @@ export class KuzuCoordinator {
     this.executeToolCallback = executeToolCallback;
   }
 
+  private handleVisibilityChange = () => {
+    if (document.visibilityState === "visible" && this.isStarted) {
+      console.log("[KuzuCoordinator] Page became visible/active. Self-healing WebSocket connections...");
+      // Forcibly tear down stale channel handles and resubscribe
+      const wasSubscribed = this.isSubscribed;
+      this.stop(true); // Keep isStarted flag true
+      this.start();
+    }
+  };
+
   /**
    * Subscribes to the real-time signaling channels and listens for queries/MCP events.
    */
   public start() {
+    this.isStarted = true;
     if (this.isSubscribed) return;
+
+    // Register visibility change listener to auto-heal from background tab sleep/suspension
+    if (typeof window !== "undefined" && typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+      document.addEventListener("visibilitychange", this.handleVisibilityChange);
+    }
 
     console.log(`[KuzuCoordinator] Subscribing to query channel: ${this.channelName}`);
     this.channel = this.supabase.channel(this.channelName);
@@ -167,10 +185,13 @@ export class KuzuCoordinator {
       });
   }
 
-  /**
-   * Cleans up channel subscriptions and disconnects the signaling tunnels.
-   */
-  public stop() {
+  public stop(keepStarted = false) {
+    if (!keepStarted) {
+      this.isStarted = false;
+      if (typeof window !== "undefined" && typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+      }
+    }
     if (this.channel) {
       console.log(`[KuzuCoordinator] Unsubscribing from query tunnel: ${this.channelName}`);
       this.supabase.removeChannel(this.channel);
