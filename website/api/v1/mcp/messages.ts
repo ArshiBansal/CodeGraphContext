@@ -234,6 +234,7 @@ export default async function handler(req: any, res: any) {
         const repo = toolArgs?.repo || toolArgs?.repository || "";
         const branch = toolArgs?.branch || "";
         const commit = toolArgs?.commit || "";
+        const session_id = toolArgs?.session_id || "";
 
         const isGlobalTool = toolName === "list_indexed_repositories" || toolName === "search_registry_bundles";
 
@@ -251,15 +252,24 @@ export default async function handler(req: any, res: any) {
           });
         }
 
-        const cleanRepo = repo ? repo.trim().replace(/^(https?:\/\/)?(www\.)?github\.com\//, "").replace(/\/$/, "") : "";
-        const cleanRepoName = cleanRepo ? cleanRepo.replace(/\//g, "_").toLowerCase() : "";
-        const cleanBranch = branch ? String(branch).replace(/\//g, "_").toLowerCase() : "main";
-        const commitStr = commit ? String(commit) : "latest";
-        const cleanCommit = commitStr.length === 40 && /^[0-9a-fA-F]+$/.test(commitStr) ? commitStr.substring(0, 7).toLowerCase() : commitStr.toLowerCase();
-        
-        const channelName = isGlobalTool 
-          ? (cleanRepoName ? `cgc-tunnel-global-${cleanRepoName}` : "cgc-tunnel-global-playground") 
-          : `cgc-tunnel-${cleanRepoName}-${cleanBranch}-${cleanCommit}`;
+        const sessionToken = session_id ? String(session_id).trim().toLowerCase() : "";
+        let channelName = "";
+
+        if (sessionToken) {
+          // 100% Secure, isolated, and simple user-scoped channel name!
+          channelName = `cgc-tunnel-${sessionToken}`;
+        } else {
+          // Backward compatibility fallback for historical ChatGPT sessions
+          const cleanRepo = repo ? repo.trim().replace(/^(https?:\/\/)?(www\.)?github\.com\//, "").replace(/\/$/, "") : "";
+          const cleanRepoName = cleanRepo ? cleanRepo.replace(/\//g, "_").toLowerCase() : "";
+          const cleanBranch = branch ? String(branch).replace(/\//g, "_").toLowerCase() : "main";
+          const commitStr = commit ? String(commit) : "latest";
+          const cleanCommit = commitStr.length === 40 && /^[0-9a-fA-F]+$/.test(commitStr) ? commitStr.substring(0, 7).toLowerCase() : commitStr.toLowerCase();
+          
+          channelName = isGlobalTool 
+            ? (cleanRepoName ? `cgc-tunnel-global-${cleanRepoName}` : "cgc-tunnel-global-playground") 
+            : `cgc-tunnel-${cleanRepoName}-${cleanBranch}-${cleanCommit}`;
+        }
         const channel = supabase.channel(channelName);
         const requestId = Math.random().toString(36).substring(2, 15);
         let hasResponded = false;

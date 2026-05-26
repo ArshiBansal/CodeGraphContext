@@ -18,6 +18,7 @@ import { useTheme } from "next-themes";
 import FlowchartSVG from "./FlowchartSVG";
 import { packageCgcBundle, downloadBlob, publishCgcBundle } from "../lib/cgc-exporter";
 import { toast } from "sonner";
+import { getOrCreateSessionId } from "../lib/utils";
 
 const PALETTE = {
   dark: {
@@ -414,7 +415,8 @@ export default function PRReviewer({ data, onClose }: { data: any, onClose: () =
     ? `${cleanOwner}__${cleanRepo}__${branchName}__${cleanCommit}` 
     : repoName;
 
-  const chatgptPreFillPrompt = `Let's analyze the repository bundle ${designedRepoName}.cgc`;
+  const userId = getOrCreateSessionId();
+  const chatgptPreFillPrompt = `Let's analyze the repository bundle ${designedRepoName}.cgc [session: ${userId}]`;
   const encodedPrompt = encodeURIComponent(chatgptPreFillPrompt);
   const chatgptUrl = `https://chatgpt.com/g/g-6a1368599210819199a1c47d021020b6-codegraphcontext?q=${encodedPrompt}`;
 

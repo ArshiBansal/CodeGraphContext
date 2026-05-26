@@ -57,7 +57,7 @@ export default async function handler(req: any, res: any) {
 
   const method = req.method;
   const params = method === "POST" ? (req.body || {}) : (req.query || {});
-  const { repo, query_type, target, cypher_query, branch, commit } = params;
+  const { repo, query_type, target, cypher_query, branch, commit, session_id } = params;
 
   if (!query_type || typeof query_type !== "string") {
     return res.status(400).json({
@@ -87,28 +87,31 @@ export default async function handler(req: any, res: any) {
   const wasmQueries = ["definitions", "callers", "callees", "file_structure", "search", "cypher"];
   const isWasmQuery = wasmQueries.includes(query_type);
 
-  let channelName = "cgc-tunnel-global-playground";
-  let cleanRepo = "";
+  let channelName = "";
+  const sessionToken = session_id ? String(session_id).trim().toLowerCase() : "";
 
-  if (repo && typeof repo === "string") {
-    cleanRepo = repo.trim().replace(/^(https?:\/\/)?(www\.)?github\.com\//, "").replace(/\/$/, "");
-  }
-
-  // Route queries to their specific repository channel if a repository is specified.
-  // We scope it by branch and commit for 100% concurrency isolation.
-  // CRITICAL: Global tools route to the repo-scoped global tunnel to prevent version mismatches.
-  if (cleanRepo) {
-    const cleanRepoName = cleanRepo.replace(/\//g, "_").toLowerCase();
-    if (isGlobalTool) {
-      channelName = `cgc-tunnel-global-${cleanRepoName}`;
-    } else {
-      const cleanBranch = branch ? String(branch).replace(/\//g, "_").toLowerCase() : "main";
-      const commitStr = commit ? String(commit) : "latest";
-      const cleanCommit = commitStr.length === 40 && /^[0-9a-fA-F]+$/.test(commitStr) ? commitStr.substring(0, 7).toLowerCase() : commitStr.toLowerCase();
-      channelName = `cgc-tunnel-${cleanRepoName}-${cleanBranch}-${cleanCommit}`;
-    }
+  if (sessionToken) {
+    // 100% Secure, isolated, and simple user-scoped channel name!
+    channelName = `cgc-tunnel-${sessionToken}`;
   } else {
-    channelName = "cgc-tunnel-global-playground";
+    // Backward compatibility fallback for historical ChatGPT sessions
+    let cleanRepo = "";
+    if (repo && typeof repo === "string") {
+      cleanRepo = repo.trim().replace(/^(https?:\/\/)?(www\.)?github\.com\//, "").replace(/\/$/, "");
+    }
+    if (cleanRepo) {
+      const cleanRepoName = cleanRepo.replace(/\//g, "_").toLowerCase();
+      if (isGlobalTool) {
+        channelName = `cgc-tunnel-global-${cleanRepoName}`;
+      } else {
+        const cleanBranch = branch ? String(branch).replace(/\//g, "_").toLowerCase() : "main";
+        const commitStr = commit ? String(commit) : "latest";
+        const cleanCommit = commitStr.length === 40 && /^[0-9a-fA-F]+$/.test(commitStr) ? commitStr.substring(0, 7).toLowerCase() : commitStr.toLowerCase();
+        channelName = `cgc-tunnel-${cleanRepoName}-${cleanBranch}-${cleanCommit}`;
+      }
+    } else {
+      channelName = "cgc-tunnel-global-playground";
+    }
   }
 
   const channel = supabase.channel(channelName);

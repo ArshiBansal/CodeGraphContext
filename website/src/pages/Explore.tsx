@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import JSZip from "jszip";
 import { parseFilesIntoGraph } from "../lib/parser";
 import { KuzuCoordinator } from "../lib/kuzu-coordinator";
+import { getOrCreateSessionId } from "../lib/utils";
 
 
 const IGNORED_DIRS = new Set([
@@ -813,8 +814,10 @@ const Explore = () => {
     const cleanBranch = branchName.replace(/\//g, "_").toLowerCase();
     const cleanCommit = commitSha.length === 40 && /^[0-9a-fA-F]+$/.test(commitSha) ? commitSha.substring(0, 7).toLowerCase() : commitSha.toLowerCase();
 
-    const channelName = `cgc-tunnel-${cleanRepoName}-${cleanBranch}-${cleanCommit}`;
-    const globalChannelName = activeRepoPath === "playground" ? "cgc-tunnel-global-playground" : `cgc-tunnel-global-${cleanRepoName}`;
+    // 100% Isolated routing using anonymous user / device ID
+    const userId = getOrCreateSessionId();
+    const channelName = `cgc-tunnel-${userId}`;
+    const legacyChannelName = `cgc-tunnel-${cleanRepoName}-${cleanBranch}-${cleanCommit}`;
 
     console.log(`[Explore Tunnel] Booting MCP signaling conduit: ${channelName}`);
 
@@ -1049,7 +1052,7 @@ const Explore = () => {
       supabaseUrl,
       supabaseAnonKey,
       channelName,
-      globalChannelName,
+      legacyChannelName,
       executeQueryCallback,
       getToolsCallback,
       executeToolCallback
