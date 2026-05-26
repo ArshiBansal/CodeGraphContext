@@ -1,6 +1,30 @@
 // website/api/v1/mcp/messages.ts
 import { createClient } from "@supabase/supabase-js";
-import { extractSessionToken, MISSING_SESSION_PAYLOAD } from "../lib/session";
+
+function extractSessionToken(args: Record<string, unknown> | null | undefined): string {
+  if (!args || typeof args !== "object") return "";
+  const direct = args.session_id ?? args.sessionId ?? args.session ?? args.cgc_session_id;
+  if (direct != null && String(direct).trim()) return String(direct).trim().toLowerCase();
+  const sessionLabel = /\bsession[:\s]+([a-z0-9]{6})\b/i;
+  for (const value of Object.values(args)) {
+    if (typeof value !== "string" || !value.trim()) continue;
+    const labeled = value.match(sessionLabel);
+    if (labeled?.[1]) return labeled[1].toLowerCase();
+  }
+  for (const value of Object.values(args)) {
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim().toLowerCase();
+    if (/^[a-z0-9]{6}$/.test(trimmed)) return trimmed;
+  }
+  return "";
+}
+
+const MISSING_SESSION_PAYLOAD = {
+  status: "missing_session",
+  message:
+    'Missing required parameter \'session_id\'. Ask the user for their 6-character session token shown at https://cgc.codes/explore. Then retry with session_id set to that token.',
+  dashboard_url: "https://cgc.codes/explore",
+};
 
 export default async function handler(req: any, res: any) {
   // Enable CORS

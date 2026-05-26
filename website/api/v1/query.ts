@@ -1,6 +1,30 @@
 // website/api/v1/query.ts
 import { createClient } from "@supabase/supabase-js";
-import { extractSessionToken, MISSING_SESSION_PAYLOAD } from "./lib/session";
+
+function extractSessionToken(args: Record<string, unknown> | null | undefined): string {
+  if (!args || typeof args !== "object") return "";
+  const direct = args.session_id ?? args.sessionId ?? args.session ?? args.cgc_session_id;
+  if (direct != null && String(direct).trim()) return String(direct).trim().toLowerCase();
+  const sessionLabel = /\bsession[:\s]+([a-z0-9]{6})\b/i;
+  for (const value of Object.values(args)) {
+    if (typeof value !== "string" || !value.trim()) continue;
+    const labeled = value.match(sessionLabel);
+    if (labeled?.[1]) return labeled[1].toLowerCase();
+  }
+  for (const value of Object.values(args)) {
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim().toLowerCase();
+    if (/^[a-z0-9]{6}$/.test(trimmed)) return trimmed;
+  }
+  return "";
+}
+
+const MISSING_SESSION_PAYLOAD = {
+  status: "missing_session",
+  message:
+    'Missing required parameter \'session_id\'. Ask the user for their 6-character session token shown at https://cgc.codes/explore. Then retry with session_id set to that token.',
+  dashboard_url: "https://cgc.codes/explore",
+};
 
 /**
  * Builds a tool-specific graceful offline response (HTTP 200).
@@ -45,7 +69,6 @@ function offlineResponse(query_type: string) {
 }
 
 export default async function handler(req: any, res: any) {
-  // Enable CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -54,6 +77,21 @@ export default async function handler(req: any, res: any) {
     return res.status(200).end();
   }
 
+  try {
+    return await handleQuery(req, res);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown server error";
+    console.error("[query] unhandled error:", message);
+    return res.status(200).json({
+      status: "error",
+      error: "Signaling gateway failed to execute tunnel query.",
+      details: message,
+      message: "Open https://cgc.codes/explore in a browser tab and retry.",
+    });
+  }
+}
+
+async function handleQuery(req: any, res: any) {
   const method = req.method;
   const params = method === "POST" ? (req.body || {}) : (req.query || {});
   const { repo, query_type, target, cypher_query, branch, commit } = params;
