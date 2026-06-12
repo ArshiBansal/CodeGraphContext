@@ -1,32 +1,71 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Sparkles, ArrowLeft, Github, Menu, X, Box } from "lucide-react";
 
 import MagneticButton from "./MagneticButton";
 
 function handleScroll(e: React.MouseEvent<HTMLAnchorElement>) {
-  const href = e.currentTarget.getAttribute('href');
-  if (href && href.startsWith('#')) {
+  const href = e.currentTarget.getAttribute("href");
+  if (href && href.startsWith("#")) {
     e.preventDefault();
-    const id = href.replace('#', '');
+    const id = href.replace("#", "");
     const el = document.getElementById(id);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
 }
 
 const Navbar: React.FC = () => {
   const location = useLocation();
-  const isLandingPage = location.pathname === "/" || location.pathname === "/pre-indexed";
+  const isLandingPage =
+    location.pathname === "/" || location.pathname === "/pre-indexed";
   const [isOpen, setIsOpen] = useState(false);
+
+  // Scroll Progress State
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  // Scroll Progress Handler
+  useEffect(() => {
+    const updateProgress = () => {
+      const scrollTop = window.scrollY;
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = window.innerHeight;
+
+      const scrollableDistance = scrollHeight - clientHeight;
+      const progress =
+        scrollableDistance > 0
+          ? Math.min(Math.max((scrollTop / scrollableDistance) * 100, 0), 100)
+          : 0;
+
+      setScrollProgress(progress);
+    };
+
+    window.addEventListener("scroll", updateProgress, { passive: true });
+    // Initial calculation
+    updateProgress();
+
+    return () => {
+      window.removeEventListener("scroll", updateProgress);
+    };
+  }, []);
 
   return (
     <nav className="fixed top-0 left-0 z-50 w-full select-none bg-black border-b border-white/10">
+      {/* Scroll Progress Indicator */}
+      <div className="h-0.5 w-full bg-zinc-900 overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-purple-600 via-cyan-500 to-purple-600 transition-all duration-200 ease-out"
+          style={{ width: `${scrollProgress}%` }}
+        />
+      </div>
+
       <div className="w-full max-w-7xl mx-auto px-4 md:px-6 h-14 md:h-16 flex items-center justify-between">
-        
         {/* Left: Brand Logo & Title */}
-        <Link to="/" className="flex items-center gap-2 md:gap-3 mr-4 shrink-0 group">
+        <Link
+          to="/"
+          className="flex items-center gap-2 md:gap-3 mr-4 shrink-0 group"
+        >
           <img
             src="/cgcIcon.png"
             className="w-7 h-7 md:w-8 md:h-8 hover:scale-95 transition-transform duration-300"
@@ -41,27 +80,47 @@ const Navbar: React.FC = () => {
         {isLandingPage && (
           <ul className="hidden lg:flex items-center gap-6 font-bold text-[10px] uppercase tracking-widest text-gray-500">
             <li>
-              <a href="#features" className="hover:text-white transition-colors duration-200" onClick={handleScroll}>
+              <a
+                href="#features"
+                className="hover:text-white transition-colors duration-200"
+                onClick={handleScroll}
+              >
                 Features
               </a>
             </li>
             <li>
-              <a href="#bundle-registry" className="hover:text-white transition-colors duration-200" onClick={handleScroll}>
+              <a
+                href="#bundle-registry"
+                className="hover:text-white transition-colors duration-200"
+                onClick={handleScroll}
+              >
                 Pre-indexed
               </a>
             </li>
             <li>
-              <a href="#cookbook" className="hover:text-white transition-colors duration-200" onClick={handleScroll}>
+              <a
+                href="#cookbook"
+                className="hover:text-white transition-colors duration-200"
+                onClick={handleScroll}
+              >
                 Cookbook
               </a>
             </li>
             <li>
-              <a href="#demo" className="hover:text-white transition-colors duration-200" onClick={handleScroll}>
+              <a
+                href="#demo"
+                className="hover:text-white transition-colors duration-200"
+                onClick={handleScroll}
+              >
                 Demo
               </a>
             </li>
             <li>
-              <a href="#installation" className="hover:text-white transition-colors duration-200" onClick={handleScroll}>
+              <a
+                href="#installation"
+                className="hover:text-white transition-colors duration-200"
+                onClick={handleScroll}
+              >
                 Installation
               </a>
             </li>
@@ -104,7 +163,11 @@ const Navbar: React.FC = () => {
               className="lg:hidden p-2 text-gray-500 hover:text-white transition-colors duration-200 shrink-0"
               title="Menu"
             >
-              {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {isOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
             </button>
           )}
         </div>
